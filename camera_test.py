@@ -13,7 +13,7 @@ marker_id = 0
 marker_length = .025
 cam_yaw = np.deg2rad(50)
 cam_pitch = np.deg2rad(-120)
-t_c_o = [.2697, .0784, .3299]
+t_c_o_o = [.2697, .0784, .3299]
 
 # Initialize camera and detector objects
 camera   = am.camera.cvCamera(cam_idx)
@@ -38,19 +38,18 @@ for i, c in enumerate(corners):
 
         # Estimate marker pose
         pose = pose_detector.estimate_marker_pose(c)
-        q_box_c = np.quaternion(*pose.rotation.as_quat(scalar_first=True))
-        t_box_cam_c = pose.translation
+        q_b_c = np.quaternion(*pose.rotation.as_quat(scalar_first=True))
+        t_b_c_c = pose.translation
 
 # Rotation from origin to camera frame 
 q_c_o = np.quaternion(np.cos(cam_yaw/2), 0, 0, np.sin(np.sin(cam_yaw/2))) * np.quaternion(np.cos(cam_pitch/2), np.sin(cam_pitch/2), 0, 0)
 
 # Convert box pose from camera frame to origin 
-q_box_o = q_c_o * q_box_c * q_c_o.conjugate()
-t_box_cam_o = quat.as_vector_part(q_c_o * quat.from_vector_part(t_box_c) * q_c_o.conjugate())
-t_box_o = t_c_o+t_box_o
+q_b_o = q_c_o * q_b_c * q_c_o.conjugate()
+t_b_c_o = quat.as_vector_part(q_c_o * quat.from_vector_part(t_b_c_c) * q_c_o.conjugate())
+t_b_o_o = t_c_o_o+t_b_c_o
 
 # Print final pose
-
-
-print('Rotation:', Rotation.from_quat(quat.as_float_array(q_box_o), scalar_first=True).as_euler('ZXY', degrees=True))
-print('Translation:', t_c_o+t_box_o)
+euler_b_o = Rotation.from_quat(quat.as_float_array(q_b_o), scalar_first=True).as_euler('ZYX', degrees=True)
+print(f'Rotation (deg): yaw={euler_b_o[0]:.1f}, pitch={euler_b_o[1]:.1f}, roll={euler_b_o[2]:.1f}')
+print(f'Translation (cm): x={t_b_o_o[0]*100:.1f}, y={t_b_o_o[1]*100:.1f}, z={t_b_o_o[2]*100:.1f}')
