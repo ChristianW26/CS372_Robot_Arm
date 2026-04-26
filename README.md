@@ -4,8 +4,7 @@
 
 Train a **PPO** policy in simulation for the **ManiSkill `PickCube-v1` manipulation task** with the `so100` robot (state observations + joint-delta control) and evaluate whether training improves task performance over time.
 
-### Demo video (non-technical)
-This section is meant to satisfy: **“Project demo video effectively communicates why the project matters to a non-technical audience in non-technical terms.”**
+### Demo video
 
 - **Main demo link (recommended)**: *TODO: add YouTube/Drive link (best for inline playback)*
 - **Training progression clips (GIFs play inline; MP4s are linked for full quality)**:
