@@ -10,6 +10,9 @@ from tqdm import tqdm
 import pandas as pd
 
 class PPO():
+    '''
+        Simple PPO implementation to train SO100 robot arm using ManiSkill API.
+    '''
     def __init__(self, device, env, 
                  actor_lr=1e-3, critic_lr=5e-3, std=.1, clip=.2, gamma=.95, time_penalty=0.0, success_bonus = 5.0,
                  actor_param_path='../models/ppo_actor.pth', 
@@ -65,10 +68,8 @@ class PPO():
                       tensor of shape (batch_size, observation_dimension)
 
 			Return:
-				action - the action to take.
-                         tensor of shape (batch_size, action_dimension)
-				log_prob - the log probability of the selected action in the distribution
-                           tensor of shape (batch_size,)
+				action - the action to take: shape (batch_size, action_dimension)
+				log_prob - the log probability of the selected action in the distribution: shape (batch_size,)
 		"""
         mean = self.actor(obs)
         dist = Normal(mean, self.std)
@@ -83,16 +84,14 @@ class PPO():
 			iteration of the actor network. Should be called from learn.
 
 			Parameters:
-				obs - the observations from the most recently collected batch.
-				      tensor of shape (batch_size, time_steps ,observation_dimension)
-				action - the actions from the most recently collected batch.
-					     tensor of shape (batch_size, time_steps, action_dimension)
+				obs - the observations from the most recently collected batch: 
+                      shape (batch_size, time_steps ,observation_dimension)
+				action - the actions from the most recently collected batch:
+					     shape (batch_size, time_steps, action_dimension)
 
 			Return:
-				v - the predicted values of batch observations
-                    tensor of shape (batch_size,)
-				log_prob - the log probabilities of the action taken given obs
-                           tensor of shape (batch_size,)
+				v - the predicted values of batch observations: shape (batch_size,)
+				log_prob - the log probabilities of the action taken given obs: shape (batch_size,)
 		"""
         v = self.critic(obs).squeeze()
 
