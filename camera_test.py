@@ -15,7 +15,7 @@ cam_pitch = np.deg2rad(-30 - 90)
 t_c_o_o = [.2697, .0784, .3299]
 
 # Initialize camera and detector objects
-camera   = am.camera.cvCamera(cam_idx)
+camera = am.camera.cvCamera(cam_idx)
 print('Using camera: ', camera.name)
 detector = am.load_detector(dict_name)
 pose_detector = am.SingleMarkerPoseEstimation(camera, marker_length)
