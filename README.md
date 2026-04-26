@@ -1,124 +1,185 @@
 ## CS372 Robot Arm — PPO for ManiSkill PickCube (Simulation)
 
-### Project goal 
+### What it does
 
-Train a **PPO** policy in simulation for the **ManiSkill `PickCube-v1` manipulation task** with the `so100` robot (state observations + joint-delta control) and evaluate whether training improves task performance over time.
+This project trains a **PPO reinforcement learning policy** in the **ManiSkill `PickCube-v1`** simulation task (with the `so100` robot) and evaluates learning progress over training iterations using quantitative curves (reward, episode length, actor/critic losses) and qualitative rollouts (progression videos).
 
-### Demo video
+### Project goal
 
-- **Main demo link (recommended)**: *TODO: add YouTube/Drive link (best for inline playback)*
-- **Training progression clips (GIFs play inline; MP4s are linked for full quality)**:
-  - **Preliminary** — moves near the cube but struggles to grasp it  
-    ![Preliminary](./media/preliminary.gif)  
-  - **In progress** — grasps the cube but struggles to reach/complete the goal  
-    ![In progress](./media/Inprogress.gif)  
-  - **Final** — completes the full task (grasp + goal)  
-    ![Final](./media/final.gif)  
+Train a policy that **reliably completes `PickCube-v1` and does so efficiently**, then show that improvement over time through the logged evaluation metrics.
 
+### Why this is meaningful
 
-### Why this is meaningful 
+Robot manipulation is a core research problem, and standardized simulation benchmarks let us evaluate learning-based control reproducibly.
 
-Robot manipulation is a core research problem, and simulation benchmarks let us test learning-based control methods reproducibly. This project is grounded in:
+- **Benchmark**: ManiSkill manipulation suite (`PickCube-v1`) (research benchmark / competition-style task suite).  
+- **Algorithm**: PPO (Schulman et al.), a widely used baseline for continuous-control RL.
 
-- **Benchmark environment**: ManiSkill’s manipulation tasks (we use `PickCube-v1` via `gymnasium` + `mani-skill`).  
-  - ManiSkill: a widely used robotics RL benchmark suite for learning-based manipulation in simulation.
-- **RL algorithm**: **Proximal Policy Optimization (PPO)** (Schulman et al.), a standard baseline in modern continuous-control RL.
-- **Research question**: does PPO training measurably improve success and efficiency on a standardized pick-and-lift task (and what reward shaping helps)?
+### Quick Start
 
-### Technical walkthrough 
+- **Setup**: follow `SETUP.md`
+- **Run training + plots**: open and run `rl/ppo.ipynb`
+- **View results**:
+  - learning curves: `rl/Training Data.csv` (also plotted in the notebook and shown below)
+  - rollout progression: see the GIFs in the “Video Links” section below
 
-This repo is a single pipeline, not isolated experiments:
+### Video Links
 
-- **(1) Simulation environment** (`ppo.ipynb`)
-  - Creates the task with `gym.make("PickCube-v1", obs_mode="state", control_mode="pd_joint_delta_pos", robot_uids="so100")`
-  - Wraps it with `ManiSkillVectorEnv` for batched rollout collection.
-- **(2) PPO training loop** (`ppo.ipynb`)
-  - Actor/Critic MLPs are trained on batches of trajectories.
-  - Training runs for a configured number of **iterations** (the notebook uses `num_batches=1_000`).
-  - Rewards are shaped by two explicit design choices already implemented:
-    - **success bonus**: `reward += (reward == 1.0) * success_bonus`
-    - **time penalty**: `reward -= time_penalty`
-  - Training logs are written to `**Training Data.csv`** with:
-    - `Actor Losses`, `Critic Losses`, `Total Rewards`, `Avg Lengths`
-- **(3) Offline evaluation visualization** (`ppo.ipynb`)
-  - Plots smoothed curves for the above metrics and renders an evaluation rollout video in-notebook.
+- **Project demo video (non-technical)**: *TODO: add link*
+- **Technical walkthrough video**: *TODO: add link*
 
-### Problem → approach → solution → evaluation 
+### Demo video (non-technical) — training progression (GIFs)
 
-- **Problem**: Hand-tuning a controller for pick-and-lift is brittle; we want to learn it from interaction.
-- **Approach**: Use ManiSkill `PickCube-v1` as a standardized manipulation benchmark and train PPO for a fixed number of iterations.
-- **Solution**: A trained PPO actor/critic (saved as `.pth`) and a repeatable notebook that logs metrics every training run.
-- **Evaluation**: Use objective learning curves (losses + rewards + episode length) and a short demo video that shows qualitative behavior.
+These GIFs play inline in GitHub and show qualitative improvement across training stages (MP4s are in `media/` if you want higher quality).
 
-### Evaluation metrics 
+- **Preliminary** — moves near the cube but struggles to grasp it  
+Preliminary
+- **In progress** — grasps the cube but struggles to reach/complete the goal  
+In progress
+- **Final** — completes the full task (grasp + goal)  
+Final
 
-The objective in `PickCube-v1` is to complete the pick-and-lift task reliably and efficiently. The code already measures:
+### Technical walkthrough
 
-- **Success / completion signal**: the environment reward reaching `1.0` (used in training as a trigger for `success_bonus`).
-- **Average episode length** (`Avg Lengths`): shorter is better given a positive success objective (efficiency).
-- **Total reward** (`Total Rewards`): includes base environment reward + success bonus − time penalty, so it is aligned with “succeed quickly”.
-- **Actor/Critic losses**: training stability diagnostics (not a task metric, but used to verify learning behavior).
-- **Iterations / batches**: the training loop runs for a fixed number of batches (the notebook uses `num_batches=1_000`), so plots can be interpreted as “metric vs iteration”.
-- ***Maybe add success rate over N evaluations metric***
+#### 1) Task definition
 
-### Training progression 
-Across the three clips in `media/`, performance improves in a way that matches the plotted metrics:
+- **Environment**: ManiSkill `PickCube-v1` with `robot_uids="so100"`.
+- **Goal**: complete the pick-and-lift task; the notebook treats `**reward == 1.0`** as the success/completion signal.
 
-- **Preliminary**: the policy tends to approach the cube but fails to consistently grasp.
-- **In progress**: the policy learns to grasp but is inefficient/inconsistent about reaching the goal state.
-- **Final**: the policy completes the full sequence.
+#### 2) Environment configuration
 
-The biggest improvements came from:
+In the notebook we instantiate:
+
+- `env = gym.make("PickCube-v1", num_envs=128, obs_mode="state", control_mode="pd_joint_delta_pos", render_mode=None, robot_uids="so100")`
+- Then wrap with `env = ManiSkillVectorEnv(env, auto_reset=False, ignore_terminations=False)`
+
+Why these choices:
+
+- `**obs_mode="state"**` keeps the project focused on control learning (no vision model).
+- `**pd_joint_delta_pos**` gives a continuous joint-delta action interface that PPO can learn over.
+- `**num_envs=128**` vectorizes experience collection (one “batch” is many parallel rollouts).
+
+#### 3) PPO model
+
+The notebook implements PPO as an actor–critic with fixed-size MLPs:
+
+- **Actor**: `obs_dim → 512 → 512 → 512 → act_dim` with `ReLU` activations and a final `Tanh`.
+- **Critic**: `obs_dim → 512 → 512 → 512 → 1` with `ReLU` activations.
+- **Action distribution**: a multivariate diagonal **Normal** with:
+  - mean = actor output
+  - **fixed std** vector (`self.std`, e.g. `std=0.3` in the notebook run)
+  - actions are sampled and the **log-prob** is tracked for PPO’s ratio.
+
+Key PPO hyperparameters used in the example run cell:
+
+- `actor_lr=1e-3`, `critic_lr=5e-3`
+- `clip=0.1` (PPO clipping range)
+- `gamma=0.95`
+
+#### 4) Data collection
+
+Each training iteration calls `run_batch()`:
+
+- Reset env, then loop step-by-step until **all** parallel envs have terminated/truncated.
+- At each step:
+  - store observations
+  - sample action from the actor and step the env
+  - store action and log-prob
+  - store reward and a “mask” indicating which envs are still active
+
+#### 5) Reward shaping
+
+The notebook explicitly shapes reward during rollout:
+
+- **Success bonus**: `reward += (reward == 1.0) * success_bonus`
+- **Time penalty**: `reward -= time_penalty`
+
+In the example training cell, these are set to:
+
+- `time_penalty=1`
+- `success_bonus=10.0`
+
+This is the main lever that improved behavior across Preliminary → In progress → Final.
+
+#### 6) Returns, advantage, and PPO update
+
+After collecting a batch:
+
+- **Returns** R_t are computed by a discounted backward pass using `gamma`.
+- The critic predicts values V(s_t).
+- **Advantage** A_t = R_t - V(s_t) is computed and then **normalized** to improve stability.
+
+Then PPO performs `update_steps` gradient steps per batch (default `update_steps=5`):
+
+- Compute log-probs under current policy, form `ratios = exp(new_logp - old_logp)`.
+- **Clipped surrogate objective**:
+  - `surr1 = ratios * A`
+  - `surr2 = clamp(ratios, 1-clip, 1+clip) * A`
+  - actor loss = negative mean of `min(surr1, surr2)` (masked over valid timesteps)
+- **Critic loss**: masked MSE between `V(s)` and returns.
+
+#### 7) Training schedule + saving/logging
+
+The notebook runs:
+
+- `model.train(num_batches=1_000, patience=None, save_freq=10)`
+
+Every `save_freq` batches (and at the end), it writes:
+
+- **Weights**:
+  - `rl/ppo_actor.pth`
+  - `rl/ppo_critic.pth`
+- **Metrics CSV**: `rl/Training Data.csv` with columns:
+  - `Actor Losses`, `Critic Losses`, `Total Rewards`, `Avg Lengths`
+
+Note: the notebook appends to the CSV in chunks every `save_freq` batches.
+
+#### 8) Evaluation
+
+We evaluate learning with:
+
+- **Quantitative curves** over iterations:
+  - `Total Rewards` should trend upward
+  - `Avg Lengths` should trend downward once success is common (faster completion)
+  - losses should stabilize (diagnostic)
+- **Qualitative progression**:
+  - the three GIFs in `media/` show early/mid/final behavior improvements.
+
+### Evaluation
+
+The project objective is to succeed and do so efficiently. We evaluate with:
+
+- **Total reward** (`Total Rewards` in `rl/Training Data.csv`)
+- **Average episode length** (`Avg Lengths`) — lower is better if success is maintained
+- **Actor/Critic loss curves** (`Actor Losses`, `Critic Losses`) — stability diagnostics
+- **Training iterations**: curves are tracked over `num_batches` (default `1_000`)
+- **Qualitative rollouts**: the three progression clips (Preliminary → In progress → Final)
+
+**Learning curves (final run)**:
+
+Learning curves
+
+*TODO*: report **success rate over N evaluation episodes** as a single headline metric.
+
+### Design choices (explicit justification)
+
+- `**obs_mode="state"`**: focuses the project on learning control, avoiding the additional complexity of learning from pixels.
+- `**control_mode="pd_joint_delta_pos"**`: stable continuous-control interface for PPO (small joint updates per step).
 - **Reward shaping**:
-  - adding a **negative reward per timestep** (time penalty) to push faster completion
-  - adding a **large reward for completing the task** (success bonus) to strongly reinforce successful episodes
-- **More training experience**: training for **more episodes / iterations** (more batches collected from the environment).
+  - **Time penalty** reduces “wandering” behavior and encourages efficiency.
+  - **Success bonus** increases the learning signal for completion.
 
-### Design choices
+### Repo structure
 
-These are the key implementation choices and why they exist:
+- **Training notebook**: `rl/ppo.ipynb`
+- **Training logs**: `rl/Training Data.csv`
+- **Model weights**: `rl/ppo_actor.pth`, `rl/ppo_critic.pth`
+- **Media**: `media/` (GIFs + MP4 clips)
 
-- `**obs_mode="state"`**: focuses on learning control dynamics without adding the complexity of vision-based learning.
-- `**control_mode="pd_joint_delta_pos"**`: provides a stable continuous-control interface for PPO (small joint updates each step).
-- **Reward shaping**:
-  - **Success bonus** encourages task completion rather than “hovering near success”.
-  - **Time penalty** discourages long episodes and aligns with “lift quickly”.
+### Individual Contributions (template)
 
-### Repo layout
+*TODO: fill in names + responsibilities.*
 
-- `**ppo.ipynb`**: training + plotting + sim evaluation for PPO on ManiSkill `PickCube-v1` with `so100`.
-- **Artifacts**:
-  - `**Training Data.csv`**: training log output from `ppo.ipynb`.
-  - `**ppo_actor.pth`, `ppo_critic.pth**`: saved model weights from `ppo.ipynb` training.
-
-### Setup
-
-This project uses **Python ≥ 3.12** (see `pyproject.toml`) and depends on `gymnasium`, `mani-skill`, `torch`, and plotting/logging libraries.
-
-If you use `uv`:
-
-```bash
-uv sync
-```
-
-Or with pip (conceptually):
-
-```bash
-pip install -e .
-```
-
-### Run: training + evaluation in simulation
-
-Open and run:
-
-- `ppo.ipynb`
-
-Key configuration (from the notebook):
-
-- `env_id`: `PickCube-v1`
-- `obs_mode`: `state`
-- `control_mode`: `pd_joint_delta_pos`
-- `robot_uids`: `so100`
-- vectorized rollout: `num_envs = 128`
-- training iterations: `num_batches = 1_000`
-
+- **Person A**: environment setup, PPO implementation, training runs
+- **Person B**: reward shaping experiments, evaluation metrics/plots
+- **Person C**: demo videos, README/documentation, presentation
