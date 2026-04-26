@@ -33,11 +33,11 @@ Robot manipulation is a core research problem, and standardized simulation bench
 These GIFs play inline in GitHub and show qualitative improvement across training stages (MP4s are in `media/` if you want higher quality).
 
 - **Preliminary** — moves near the cube but struggles to grasp it  
-  ![Preliminary](./media/preliminary.gif)
+  ![Preliminary](./videos/preliminary.gif)
 - **In progress** — grasps the cube but struggles to reach/complete the goal  
-  ![In progress](./media/Inprogress.gif)
+  ![In progress](./videos/Inprogress.gif)
 - **Final** — completes the full task (grasp + goal)  
-  ![Final](./media/final.gif)
+  ![Final](./videos/final.gif)
 
 ### Technical walkthrough
 
@@ -157,7 +157,7 @@ The project objective is to succeed and do so efficiently. We evaluate with:
 
 **Learning curves (final run)**:
 
-![Learning curves](./media/final_eval.jpg)
+![Learning curves](./videos/final_eval.jpg)
 
 *TODO*: report **success rate over N evaluation episodes** as a single headline metric.
 
