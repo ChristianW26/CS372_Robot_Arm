@@ -178,8 +178,5 @@ The project objective is to succeed and do so efficiently. We evaluate with:
 
 ### Individual Contributions (template)
 
-*TODO: fill in names + responsibilities.*
-
-- **Person A**: environment setup, PPO implementation, training runs
-- **Person B**: reward shaping experiments, evaluation metrics/plots
-- **Person C**: demo videos, README/documentation, presentation
+- **Christian Wacker**: environment setup, PPO implementation, training runs
+- **Humza Chouhdry**: hardware creation, hardware deployment (unsuccesful), documentation, environment initialization
