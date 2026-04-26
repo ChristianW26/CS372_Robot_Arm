@@ -157,7 +157,7 @@ The project objective is to succeed and do so efficiently. We evaluate with:
 
 **Learning curves (final run)**:
 
-![Learning curves](./media/Final_Eval.png)
+![Learning curves](./media/final_eval.jpg)
 
 *TODO*: report **success rate over N evaluation episodes** as a single headline metric.
 
