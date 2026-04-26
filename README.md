@@ -8,10 +8,13 @@ Train a **PPO** policy in simulation for the **ManiSkill `PickCube-v1` manipulat
 This section is meant to satisfy: **“Project demo video effectively communicates why the project matters to a non-technical audience in non-technical terms.”**
 
 - **Main demo link (recommended)**: *TODO: add YouTube/Drive link (best for inline playback)*
-- **Training progression clips (MP4s in this repo)**:
-  - **Preliminary**: [`media/preliminary.mp4`](./media/preliminary.mp4) — moves near the cube but struggles to grasp it
-  - **In progress**: [`media/Inprogress.mp4`](./media/Inprogress.mp4) — grasps the cube but struggles to reach/complete the goal
-  - **Final**: [`media/final.mp4`](./media/final.mp4) — completes the full task (grasp + goal)
+- **Training progression clips (GIFs play inline; MP4s are linked for full quality)**:
+  - **Preliminary** — moves near the cube but struggles to grasp it  
+    ![Preliminary](./media/preliminary.gif)  
+  - **In progress** — grasps the cube but struggles to reach/complete the goal  
+    ![In progress](./media/Inprogress.gif)  
+  - **Final** — completes the full task (grasp + goal)  
+    ![Final](./media/final.gif)  
 
 
 ### Why this is meaningful 
@@ -59,7 +62,7 @@ The objective in `PickCube-v1` is to complete the pick-and-lift task reliably an
 - **Iterations / batches**: the training loop runs for a fixed number of batches (the notebook uses `num_batches=1_000`), so plots can be interpreted as “metric vs iteration”.
 - ***Maybe add success rate over N evaluations metric***
 
-### Training progression (what changed and why)
+### Training progression 
 Across the three clips in `media/`, performance improves in a way that matches the plotted metrics:
 
 - **Preliminary**: the policy tends to approach the cube but fails to consistently grasp.
