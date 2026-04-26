@@ -31,22 +31,18 @@ class PPO():
         self.critic_param_path = critic_param_path
         self.training_data_path = training_data_path
 
-        self.actor = nn.Sequential(nn.Linear(self.obs_dim, 512), 
+        self.actor = nn.Sequential(nn.Linear(self.obs_dim, 256), 
                                    nn.ReLU(),
-                                   nn.Linear(512, 512),
+                                   nn.Linear(256, 256),
                                    nn.ReLU(),
-                                   nn.Linear(512, 512),
-                                   nn.ReLU(),
-                                   nn.Linear(512, self.act_dim),
+                                   nn.Linear(256, self.act_dim),
                                    nn.Tanh()).to(device)
         self.std = torch.full(size=(self.act_dim,), fill_value=std, device=device)
-        self.critic = nn.Sequential(nn.Linear(self.obs_dim, 512), 
+        self.critic = nn.Sequential(nn.Linear(self.obs_dim, 256), 
                                     nn.ReLU(),
-                                    nn.Linear(512, 512),
+                                    nn.Linear(256, 256),
                                     nn.ReLU(),
-                                    nn.Linear(512, 512),
-                                    nn.ReLU(),
-                                    nn.Linear(512, 1)).to(device)
+                                    nn.Linear(256, 1)).to(device)
         if load_parameters:
             self.actor.load_state_dict(torch.load(self.actor_param_path))
             self.critic.load_state_dict(torch.load(self.critic_param_path))
