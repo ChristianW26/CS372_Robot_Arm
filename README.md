@@ -33,18 +33,18 @@ Robot manipulation is a core research problem, and standardized simulation bench
 These GIFs play inline in GitHub and show qualitative improvement across training stages (MP4s are in `media/` if you want higher quality).
 
 - **Preliminary** — moves near the cube but struggles to grasp it  
-Preliminary
+  ![Preliminary](./media/preliminary.gif)
 - **In progress** — grasps the cube but struggles to reach/complete the goal  
-In progress
+  ![In progress](./media/Inprogress.gif)
 - **Final** — completes the full task (grasp + goal)  
-Final
+  ![Final](./media/final.gif)
 
 ### Technical walkthrough
 
 #### 1) Task definition
 
 - **Environment**: ManiSkill `PickCube-v1` with `robot_uids="so100"`.
-- **Goal**: complete the pick-and-lift task; the notebook treats `**reward == 1.0`** as the success/completion signal.
+- **Goal**: complete the pick-and-lift task; the notebook treats **`reward == 1.0`** as the success/completion signal.
 
 #### 2) Environment configuration
 
@@ -55,9 +55,9 @@ In the notebook we instantiate:
 
 Why these choices:
 
-- `**obs_mode="state"**` keeps the project focused on control learning (no vision model).
-- `**pd_joint_delta_pos**` gives a continuous joint-delta action interface that PPO can learn over.
-- `**num_envs=128**` vectorizes experience collection (one “batch” is many parallel rollouts).
+- **`obs_mode="state"`** keeps the project focused on control learning (no vision model).
+- **`pd_joint_delta_pos`** gives a continuous joint-delta action interface that PPO can learn over.
+- **`num_envs=128`** vectorizes experience collection (one “batch” is many parallel rollouts).
 
 #### 3) PPO model
 
@@ -157,14 +157,14 @@ The project objective is to succeed and do so efficiently. We evaluate with:
 
 **Learning curves (final run)**:
 
-Learning curves
+![Learning curves](./media/Final_Eval.png)
 
 *TODO*: report **success rate over N evaluation episodes** as a single headline metric.
 
 ### Design choices (explicit justification)
 
-- `**obs_mode="state"`**: focuses the project on learning control, avoiding the additional complexity of learning from pixels.
-- `**control_mode="pd_joint_delta_pos"**`: stable continuous-control interface for PPO (small joint updates per step).
+- **`obs_mode="state"`**: focuses the project on learning control, avoiding the additional complexity of learning from pixels.
+- **`control_mode="pd_joint_delta_pos"`**: stable continuous-control interface for PPO (small joint updates per step).
 - **Reward shaping**:
   - **Time penalty** reduces “wandering” behavior and encourages efficiency.
   - **Success bonus** increases the learning signal for completion.
