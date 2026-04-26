@@ -120,16 +120,16 @@ class PPO():
         batch_mask = []
         batch_frames = []
 
-        obs, _ = env.reset()
+        obs, _ = self.env.reset()
         if render: 
-            batch_frames.append(env.render().cpu().numpy())
+            batch_frames.append(self.env.render().cpu().numpy())
         episode_over = False
         while not episode_over:
             batch_obs.append(obs)
-            action, log_prob = model.get_action(obs)
+            action, log_prob = self.get_action(obs)
             obs, reward, terminated, truncated, _ = self.env.step(action)
             if render:                 
-                batch_frames.append(env.render().cpu().numpy())
+                batch_frames.append(self.env.render().cpu().numpy())
             reward += (reward == 1.0)*self.success_bonus    # Extra reward for completing the task 
             reward -= self.time_penalty     # Apply time penalty 
             mask = ~(terminated | truncated)
@@ -163,7 +163,7 @@ class PPO():
             if i == batch_timesteps-1: 
                 batch_returns[:, i] = masked_rewards[:, i]
             else: 
-                batch_returns[:, i] = masked_rewards[:, i] + model.gamma*batch_returns[:, i+1]
+                batch_returns[:, i] = masked_rewards[:, i] + self.gamma*batch_returns[:, i+1]
         
         # Calculate total rewards
         batch_total_rewards = masked_rewards.sum(dim=-1)
@@ -209,7 +209,7 @@ class PPO():
                 
                 # Surrogate loss function
                 surr1 = ratios*A
-                surr2 = torch.clamp(ratios, 1-model.clip, 1+model.clip)*A
+                surr2 = torch.clamp(ratios, 1-self.clip, 1+self.clip)*A
                 actor_loss = (-1*torch.min(surr1, surr2)*batch_mask).sum()/(batch_mask.sum())
 
                 # Critic loss function
