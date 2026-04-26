@@ -10,8 +10,11 @@ from tqdm import tqdm
 import pandas as pd
 
 class PPO():
-    def __init__(self, device, env, actor_lr=1e-3, critic_lr=5e-3, std=.1, clip=.2, gamma=.95, time_penalty=0.0, success_bonus = 5.0,
-                 actor_param_path='../models/ppo_actor.pth', critic_param_path='../models/ppo_critic.pth', training_data_path='../notebooks/Training Data.csv', 
+    def __init__(self, device, env, 
+                 actor_lr=1e-3, critic_lr=5e-3, std=.1, clip=.2, gamma=.95, time_penalty=0.0, success_bonus = 5.0,
+                 actor_param_path='../models/ppo_actor.pth', 
+                 critic_param_path='../models/ppo_critic.pth', 
+                 training_data_path='../models/ppo_training_data.csv', 
                  load_parameters=True):
         self.obs_dim = env.observation_space.shape[1]
         self.act_dim = env.action_space.shape[1]
@@ -46,7 +49,8 @@ class PPO():
             self.critic.load_state_dict(torch.load(self.critic_param_path))
         else: 
             # Create log file header
-            df = pd.DataFrame({'Actor Losses': [], 'Critic Losses': [], 'Total Rewards': [], 'Avg Lengths': []})
+            df = pd.DataFrame({'Actor Losses': [], 'Critic Losses': [], 'Total Rewards': [], 
+                               'Avg Lengths': [], 'Success Rates': []})
             df.to_csv(self.training_data_path, index=False)
 
         self.actor_optim = Adam(self.actor.parameters(), lr=actor_lr)
@@ -106,12 +110,15 @@ class PPO():
                 render - boolean: enable simulation rendering
 
 			Return:
-				batch_obs - state observations of shape (batch_size, time_steps, obs_dimension)                
-                batch_actions - actions taken of shape (batch_size, time_steps, action_dimension)
-                batch_log_probs - log(prob) of taken action of shape (batch_size, time_steps)                
-                batch_returns - returns of shape (batch_size, time_steps)                
-                batch_mask - mask for loss function calculations of shape (batch_size, time_steps)  
-                batch_frames - rgb_array of env render of shape (batch_size, time_steps, x_px, y_px, 3)    
+				batch_obs - state observations: shape (batch_size, time_steps, obs_dimension)                
+                batch_actions - actions taken: shape (batch_size, time_steps, action_dimension)
+                batch_log_probs - log(prob) of taken action: shape (batch_size, time_steps)                
+                batch_returns - returns: shape (batch_size, time_steps)                
+                batch_mask - mask for loss function calculations: shape (batch_size, time_steps)  
+                batch_total_rewards - Total rewards accumulated: shape (batch_size,)
+                batch_lengths - Length of each episode in the batch: shape (batch_size,)
+                batch_successes - Records if each episode was a success: shape (batch_size,) 
+                batch_frames - rgb_array of env render: shape (batch_size, time_steps, x_px, y_px, 3)    
 		"""
         batch_obs = []
         batch_actions = []
@@ -119,6 +126,7 @@ class PPO():
         batch_rewards = []
         batch_mask = []
         batch_frames = []
+        batch_successes = []
 
         obs, _ = self.env.reset()
         if render: 
@@ -130,13 +138,15 @@ class PPO():
             obs, reward, terminated, truncated, _ = self.env.step(action)
             if render:                 
                 batch_frames.append(self.env.render().cpu().numpy())
-            reward += (reward == 1.0)*self.success_bonus    # Extra reward for completing the task 
+            success = (reward == 1.0)
+            reward += success*self.success_bonus    # Extra reward for completing the task 
             reward -= self.time_penalty     # Apply time penalty 
             mask = ~(terminated | truncated)
             episode_over = not torch.any(mask).item()
             batch_actions.append(action)
             batch_log_probs.append(log_prob)
             batch_rewards.append(reward)
+            batch_successes.append(success)
             batch_mask.append(mask)
         
         # Stack batch data into shape (batch_size, time_steps, value(s))
@@ -144,6 +154,7 @@ class PPO():
         batch_actions = torch.stack(batch_actions, dim=1).to(self.device)
         batch_log_probs = torch.stack(batch_log_probs, dim=1).to(self.device)
         batch_rewards = torch.stack(batch_rewards, dim=1).squeeze().to(self.device)
+        batch_successes = torch.stack(batch_successes, dim=1).to(self.device)
         batch_mask = torch.stack(batch_mask, dim=1).to(self.device)
         batch_lengths = batch_mask.sum(dim=-1)
 
@@ -165,10 +176,12 @@ class PPO():
             else: 
                 batch_returns[:, i] = masked_rewards[:, i] + self.gamma*batch_returns[:, i+1]
         
-        # Calculate total rewards
+        # Calculate total rewards and determine episode successes
         batch_total_rewards = masked_rewards.sum(dim=-1)
+        batch_successes = torch.any(batch_successes, dim=-1)
         
-        return batch_obs, batch_actions, batch_log_probs, batch_returns, batch_mask, batch_total_rewards, batch_lengths, batch_frames 
+        return batch_obs, batch_actions, batch_log_probs, batch_returns, batch_mask, \
+            batch_total_rewards, batch_lengths, batch_successes, batch_frames 
     
     def train(self, num_batches=1_000, update_steps=5, save_freq=10, patience=5, min_num_batches=50):
         """
@@ -188,11 +201,13 @@ class PPO():
         critic_losses = []
         total_rewards = []
         avg_lengths = []
+        success_rates = []
         patience_count = 0
         best_actor_loss = 1e9
         for batch in tqdm(range(num_batches), desc='Training model'):  
             # Run batch
-            batch_obs, batch_actions, batch_log_probs, batch_returns, batch_mask, batch_total_rewards, batch_lengths, _ = self.run_batch()
+            batch_obs, batch_actions, batch_log_probs, batch_returns, batch_mask, batch_total_rewards, \
+                batch_lengths, batch_successes, _ = self.run_batch()
             
             # Determine advantage
             v, _ = self.evaluate(batch_obs, batch_actions)
@@ -230,6 +245,7 @@ class PPO():
             critic_losses.append(critic_loss.item())
             total_rewards.append(batch_total_rewards.mean().item())
             avg_lengths.append(batch_lengths.float().mean().item())
+            success_rates.append(batch_successes.sum()/batch_successes.numel())
             
             # Check for early stopping
             stop_cond = False
@@ -247,12 +263,14 @@ class PPO():
                 torch.save(self.actor.state_dict(), self.actor_param_path)
                 torch.save(self.critic.state_dict(), self.critic_param_path)
                 df = pd.DataFrame({'Actor Losses': actor_losses, 'Critic Losses':critic_losses, 
-                                   'Total Rewards': total_rewards, 'Avg Lengths': avg_lengths})
+                                   'Total Rewards': total_rewards, 'Avg Lengths': avg_lengths, 
+                                   'Succes Rates': success_rates})
                 df.to_csv(self.training_data_path, mode='a', header=False, index=False)
                 actor_losses = []
                 critic_losses = []
                 total_rewards = []
                 avg_lengths = []
+                success_rates = []
             
             if stop_cond: 
                 print(f'Stopping early after {batch+1:d} batches')
