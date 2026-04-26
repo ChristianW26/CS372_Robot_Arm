@@ -245,7 +245,7 @@ class PPO():
             critic_losses.append(critic_loss.item())
             total_rewards.append(batch_total_rewards.mean().item())
             avg_lengths.append(batch_lengths.float().mean().item())
-            success_rates.append(batch_successes.sum()/batch_successes.numel())
+            success_rates.append((batch_successes.sum()/batch_successes.numel()).item())
             
             # Check for early stopping
             stop_cond = False
