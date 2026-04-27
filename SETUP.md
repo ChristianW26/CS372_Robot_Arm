@@ -2,10 +2,11 @@
 
 ### 1) Prerequisites
 
+- uv python package manager (available [here](https://docs.astral.sh/uv/getting-started/installation/))
 - **Python**: 3.12+ (matches `pyproject.toml`)
 - A working C/C++ toolchain (usually already present on macOS/Linux)
 
-### 2) Install dependencies
+### 2) Install dependencies and create virtual environment
 
 #### Option A — `uv` (recommended)
 
@@ -33,13 +34,13 @@ jupyter lab
 
 Open and run:
 
-- `rl/ppo.ipynb`
+- `notebooks/ppo_training.ipynb`
 
 ### 4) Where outputs go
 
-- **Training logs**: `rl/Training Data.csv`
-- **Weights**: `rl/ppo_actor.pth`, `rl/ppo_critic.pth`
-- **Demo clips**: `media/`
+- **Training Logs**: `models/ppo_training_data.csv`
+- **Model Parameters**: `models/ppo_actor.pth`, `models/ppo_critic.pth`
+- **Demo clips**: `videos/`
 
 ### Troubleshooting
 
