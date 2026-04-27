@@ -35,8 +35,6 @@ Robot manipulation is a core research problem, and standardized simulation bench
 
 ### Demo video (non-technical) — training progression (GIFs)
 
-These GIFs play inline in GitHub and show qualitative improvement across training stages (MP4s are in `media/` if you want higher quality).
-
 - **Preliminary** — moves near the cube but struggles to grasp it  
   ![Preliminary](./videos/preliminary.gif)
 - **In progress** — grasps the cube but struggles to reach/complete the goal  
