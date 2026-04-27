@@ -159,8 +159,6 @@ The project objective is to succeed and do so efficiently. We evaluate with:
 
 ![Learning curves](./videos/final_eval.jpg)
 
-*TODO*: report **success rate over N evaluation episodes** as a single headline metric.
-
 ### Design choices (explicit justification)
 
 - **`obs_mode="state"`**: focuses the project on learning control, avoiding the additional complexity of learning from pixels.
