@@ -25,8 +25,10 @@ Robot manipulation is a core research problem, and standardized simulation bench
 
 ### Video Links
 
-- **Project demo video (non-technical)**: [![Watch the video](https://img.youtube.com/vi/lsekN_0gzXI/0.jpg)](https://www.youtube.com/watch?v=lsekN_0gzXI)
-- **Technical walkthrough video**: [![Watch the video](https://img.youtube.com/vi/GccTb0fgyCc/0.jpg)](https://www.youtube.com/watch?v=GccTb0fgyCc)
+- **Project demo video (non-technical)**: 
+[![Watch the video](https://img.youtube.com/vi/lsekN_0gzXI/0.jpg)](https://www.youtube.com/watch?v=lsekN_0gzXI)
+- **Technical walkthrough video**: 
+[![Watch the video](https://img.youtube.com/vi/GccTb0fgyCc/0.jpg)](https://www.youtube.com/watch?v=GccTb0fgyCc)
 
 ### Demo video (non-technical) — training progression (GIFs)
 
