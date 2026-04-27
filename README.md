@@ -2,7 +2,7 @@
 
 ### What it does
 
-This project trains a **Custom PPO reinforcement learning policy** in the **ManiSkill `PickCube-v1`** simulation task (with the `so100` robot) and evaluates learning progress over training iterations using quantitative curves (reward, episode length, actor/critic losses) and qualitative rollouts (progression videos).
+This project trains a **PPO reinforcement learning policy** in the **ManiSkill `PickCube-v1`** simulation task (with the `so100` robot) and evaluates learning progress over training iterations using quantitative curves (reward, episode length, actor/critic losses) and qualitative rollouts (progression videos).
 
 ### Project goal
 
@@ -18,19 +18,19 @@ Robot manipulation is a core research problem, and standardized simulation bench
 ### Quick Start
 
 - **Setup**: follow `SETUP.md`
-- **Run training + plots**: open and run `notebooks/ppo_training.ipynb`
+- **Run training + plots**: open and run `rl/ppo.ipynb`
 - **View results**:
-  - learning curves: `models/ppo_training_data.csv` (also plotted in the notebook and shown below)
+  - learning curves: `rl/Training Data.csv` (also plotted in the notebook and shown below)
   - rollout progression: see the GIFs in the “Video Links” section below
 
 ### Video Links
 
-- **Project demo video (non-technical)**: *TODO: add link*
-- **Technical walkthrough video**: *TODO: add link*
+- **Project demo video (non-technical)**: [![Watch the video](https://img.youtube.com/vi/lsekN_0gzXI/0.jpg)](https://www.youtube.com/watch?v=lsekN_0gzXI)
+- **Technical walkthrough video**: [![Watch the video](https://img.youtube.com/vi/GccTb0fgyCc/0.jpg)](https://www.youtube.com/watch?v=GccTb0fgyCc)
 
 ### Demo video (non-technical) — training progression (GIFs)
 
-These GIFs play inline in GitHub and show qualitative improvement across training stages (MP4s are in `videos/` if you want higher quality).
+These GIFs play inline in GitHub and show qualitative improvement across training stages (MP4s are in `media/` if you want higher quality).
 
 - **Preliminary** — moves near the cube but struggles to grasp it  
   ![Preliminary](./videos/preliminary.gif)
@@ -63,7 +63,7 @@ Why these choices:
 
 The notebook implements PPO as an actor–critic with fixed-size MLPs:
 
-- **Actor**: `obs_dim → 512 → 512 → 512 → act_dim` with `ReLU` activations and a final `Tanh` to constrain output to (-1, 1).
+- **Actor**: `obs_dim → 512 → 512 → 512 → act_dim` with `ReLU` activations and a final `Tanh`.
 - **Critic**: `obs_dim → 512 → 512 → 512 → 1` with `ReLU` activations.
 - **Action distribution**: a multivariate diagonal **Normal** with:
   - mean = actor output
@@ -74,7 +74,7 @@ Key PPO hyperparameters used in the example run cell:
 
 - `actor_lr=1e-3`, `critic_lr=5e-3`
 - `clip=0.1` (PPO clipping range)
-- `gamma=0.95` (Future discounting)
+- `gamma=0.95`
 
 #### 4) Data collection
 
@@ -91,7 +91,7 @@ Each training iteration calls `run_batch()`:
 
 The notebook explicitly shapes reward during rollout:
 
-- **Success bonus**: `reward += success * success_bonus`
+- **Success bonus**: `reward += (reward == 1.0) * success_bonus`
 - **Time penalty**: `reward -= time_penalty`
 
 In the example training cell, these are set to:
@@ -99,7 +99,7 @@ In the example training cell, these are set to:
 - `time_penalty=1`
 - `success_bonus=10.0`
 
-This is the primary model change that improved behavior across Preliminary → In progress → Final. 
+This is the main lever that improved behavior across Preliminary → In progress → Final.
 
 #### 6) Returns, advantage, and PPO update
 
@@ -107,16 +107,15 @@ After collecting a batch:
 
 - **Returns** R_t are computed by a discounted backward pass using `gamma`.
 - The critic predicts values V(s_t).
-- **Advantage** A_t = R_t - V(s_t) is computed and then **normalized** to improve stability. 
+- **Advantage** A_t = R_t - V(s_t) is computed and then **normalized** to improve stability.
 
 Then PPO performs `update_steps` gradient steps per batch (default `update_steps=5`):
 
-- Compute log-probs under current policy, then determine `ratios = exp(new_logp - old_logp)`.
+- Compute log-probs under current policy, form `ratios = exp(new_logp - old_logp)`.
 - **Clipped surrogate objective**:
   - `surr1 = ratios * A`
   - `surr2 = clamp(ratios, 1-clip, 1+clip) * A`
   - actor loss = negative mean of `min(surr1, surr2)` (masked over valid timesteps)
-    - The negative mean is taken so that gradient descent optimizers (like Adam) can be used. This still has the effect of performing gradient ascent on the clipped surrogate objective.
 - **Critic loss**: masked MSE between `V(s)` and returns.
 
 #### 7) Training schedule + saving/logging
@@ -128,10 +127,10 @@ The notebook runs:
 Every `save_freq` batches (and at the end), it writes:
 
 - **Weights**:
-  - `models/ppo_actor.pth`
-  - `models/ppo_critic.pth`
-- **Training Log Data**: `models/ppo_training_data.csv` with columns:
-  - `Actor Losses`, `Critic Losses`, `Total Rewards`, `Avg Lengths`, `Success Rate`
+  - `rl/ppo_actor.pth`
+  - `rl/ppo_critic.pth`
+- **Metrics CSV**: `rl/Training Data.csv` with columns:
+  - `Actor Losses`, `Critic Losses`, `Total Rewards`, `Avg Lengths`
 
 Note: the notebook appends to the CSV in chunks every `save_freq` batches.
 
@@ -144,21 +143,24 @@ We evaluate learning with:
   - `Avg Lengths` should trend downward once success is common (faster completion)
   - losses should stabilize (diagnostic)
 - **Qualitative progression**:
-  - the three GIFs in `videos/` show early/mid/final behavior improvements.
+  - the three GIFs in `media/` show early/mid/final behavior improvements.
 
 ### Evaluation
 
 The project objective is to succeed and do so efficiently. We evaluate with:
 
-- **Total reward** (`Total Rewards` in `models/ppo_training_data.csv`)
+- **Total reward** (`Total Rewards` in `rl/Training Data.csv`)
 - **Average episode length** (`Avg Lengths`) — lower is better if success is maintained
 - **Actor/Critic loss curves** (`Actor Losses`, `Critic Losses`) — stability diagnostics
-- **Training iterations**: curves are tracked over the totality of training data (~18,000 batches)
+- **Training iterations**: curves are tracked over `num_batches` (default `1_000`)
+- **Success Rate**: Episodes in which model completed the task
 - **Qualitative rollouts**: the three progression clips (Preliminary → In progress → Final)
 
-**Learning curves**:
+**Learning curves (final run)**:
 
 ![Learning curves](./videos/final_eval.jpg)
+
+*TODO*: report **success rate over N evaluation episodes** as a single headline metric.
 
 ### Design choices (explicit justification)
 
@@ -170,8 +172,8 @@ The project objective is to succeed and do so efficiently. We evaluate with:
 
 ### Repo structure
 
-- **Training notebook**: `notebooks/ppo_training.ipynb`
-- **Training logs**: `models/ppo_training_data.csv`
+- **Training notebook**: `notebooks/ppo.ipynb`
+- **Training logs**: `models/Training Data.csv`
 - **Model weights**: `models/ppo_actor.pth`, `models/ppo_critic.pth`
 - **Media**: `videos/` (GIFs + MP4 clips)
 
