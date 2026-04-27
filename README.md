@@ -99,7 +99,7 @@ In the example training cell, these are set to:
 - `time_penalty=1`
 - `success_bonus=10.0`
 
-This is the primary model change that improved behavior across Preliminary → In progress → Final. Early iterations of the model were able to move toward and grasp the cube; however, they struggle to move the cube toward the goal. After viewing the training plots and simulation renders, it became clear that the model was trying to maximize rewards by running as long as possible while collecting moderate rewards. By implementing both a significant time penalty (larger than any non-success reward) and a large success bonus, the model finally converged to succeeding in as few time steps as possible. 
+This is the primary model change that improved behavior across Preliminary → In progress → Final. 
 
 #### 6) Returns, advantage, and PPO update
 
